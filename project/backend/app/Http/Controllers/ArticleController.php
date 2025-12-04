@@ -64,6 +64,7 @@ class ArticleController extends Controller
     /**
      * Search articles.
      */
+
     public function search(Request $request)
     {
         $query = $request->input('q');
@@ -72,21 +73,41 @@ class ArticleController extends Controller
             return response()->json([]);
         }
 
-        $articles = DB::select(
-            "SELECT * FROM articles WHERE title LIKE '%" . $query . "%'"
-        );
 
-        $results = array_map(function ($article) {
+        $normalizedQuery = iconv('UTF-8', 'ASCII//TRANSLIT', $query);
+
+
+        $articles = DB::table('articles')
+            ->whereRaw("
+            LOWER(
+                REPLACE(
+                REPLACE(
+                REPLACE(
+                REPLACE(
+                REPLACE(title,
+                'é','e'),
+                'è','e'),
+                'ê','e'),
+                'à','a'),
+                'ç','c')
+            ) 
+            LIKE ?
+        ", ['%' . strtolower($normalizedQuery) . '%'])
+            ->get();
+
+        $results = $articles->map(function ($article) {
             return [
                 'id' => $article->id,
                 'title' => $article->title,
                 'content' => substr($article->content, 0, 200),
                 'published_at' => $article->published_at,
             ];
-        }, $articles);
+        });
 
         return response()->json($results);
     }
+
+
 
     /**
      * Store a newly created article.
@@ -139,4 +160,3 @@ class ArticleController extends Controller
         return response()->json(['message' => 'Article deleted successfully']);
     }
 }
-
