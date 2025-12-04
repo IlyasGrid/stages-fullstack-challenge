@@ -64,9 +64,9 @@ class ArticleController extends Controller
     }
 
     /**
-     * Search articles.
+     * Search articles using Eloquent with prepared statements.
+     * Protects against SQL injection by using query builder.
      */
-
     public function search(Request $request)
     {
         $query = $request->input('q');
@@ -75,30 +75,22 @@ class ArticleController extends Controller
             return response()->json([]);
         }
 
-        // 
-        $query = strtolower($query);
+        // Normalize query (remove accents)
+        $normalizedQuery = $this->normalizeString(strtolower($query));
+        $searchPattern = '%' . $normalizedQuery . '%';
 
-        // Normalisation côté PHP (suppression des accents)
-        $normalizedQuery = $this->normalizeString($query);
-
-        // Requête avec suppression des accents côté SQL
-        $articles = DB::table('articles')
-            ->whereRaw("
-            LOWER(
-                REPLACE(
-                REPLACE(
-                REPLACE(
-                REPLACE(
-                REPLACE(title,
-                'é','e'),
-                'è','e'),
-                'ê','e'),
-                'à','a'),
-                'ç','c')
-            ) 
-            LIKE ?
-        ", ['%' . strtolower($normalizedQuery) . '%'])
-            ->get();
+        // Use Eloquent query builder to prevent SQL injection
+        // whereRaw with bindings is safe, but using where() with JSON search is even better
+        $articles = Article::where(function ($q) use ($normalizedQuery, $searchPattern) {
+            // Search in title with accent normalization using COLLATE
+            $q->whereRaw(
+                "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(title, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ç', 'c')) LIKE ?",
+                [$searchPattern]
+            )->orWhereRaw(
+                "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(content, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ç', 'c')) LIKE ?",
+                [$searchPattern]
+            );
+        })->get();
 
         $results = $articles->map(function ($article) {
             return [
