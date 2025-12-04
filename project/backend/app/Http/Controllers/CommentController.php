@@ -49,7 +49,9 @@ class CommentController extends Controller
         $comment->delete();
 
         $remainingComments = Comment::where('article_id', $articleId)->get();
-        $firstComment = $remainingComments[0];
+
+        // Vérifier d’abord s’il y a des commentaires restants et Retourner null ou un message adapté si aucun commentaire n’est présent
+        $firstComment = $remainingComments->isNotEmpty() ? $remainingComments[0] : null;
 
         return response()->json([
             'message' => 'Comment deleted successfully',
