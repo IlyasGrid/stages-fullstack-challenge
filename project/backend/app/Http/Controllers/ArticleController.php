@@ -70,7 +70,7 @@ class ArticleController extends Controller
         $query = $request->input('q');
 
         if (!$query) {
-            return response()->json([]);
+            return response()->json([]); 
         }
 
         // Normalisation côté PHP (suppression des accents)
