@@ -43,6 +43,30 @@ class User extends Authenticatable
     ];
 
     /**
+     * Set the password attribute, ensuring it is hashed.
+     * If value is already hashed, it will not be re-hashed.
+     *
+     * @param  string  $value
+     * @return void
+     */
+    public function setPasswordAttribute($value)
+    {
+        if ($value === null) {
+            $this->attributes['password'] = null;
+            return;
+        }
+
+        // If already hashed (bcrypt or argon2), don't re-hash
+        if (is_string($value) && (strpos($value, '$2y$') === 0 || strpos($value, '$argon2') === 0)) {
+            $this->attributes['password'] = $value;
+            return;
+        }
+
+        // Hash the plaintext password
+        $this->attributes['password'] = \Illuminate\Support\Facades\Hash::make($value);
+    }
+
+    /**
      * Get the articles for the user.
      */
     public function articles()
