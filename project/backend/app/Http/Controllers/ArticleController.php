@@ -64,6 +64,7 @@ class ArticleController extends Controller
     /**
      * Search articles.
      */
+
     public function search(Request $request)
     {
         $query = $request->input('q');
@@ -72,21 +73,62 @@ class ArticleController extends Controller
             return response()->json([]);
         }
 
-        $articles = DB::select(
-            "SELECT * FROM articles WHERE title LIKE '%" . $query . "%'"
-        );
+        // 
+        $query = strtolower($query);
 
-        $results = array_map(function ($article) {
+        // Normalisation côté PHP (suppression des accents)
+        $normalizedQuery = $this->normalizeString($query);
+
+        // Requête avec suppression des accents côté SQL
+        $articles = DB::table('articles')
+            ->whereRaw("
+            LOWER(
+                REPLACE(
+                REPLACE(
+                REPLACE(
+                REPLACE(
+                REPLACE(title,
+                'é','e'),
+                'è','e'),
+                'ê','e'),
+                'à','a'),
+                'ç','c')
+            ) 
+            LIKE ?
+        ", ['%' . strtolower($normalizedQuery) . '%'])
+            ->get();
+
+        $results = $articles->map(function ($article) {
             return [
                 'id' => $article->id,
                 'title' => $article->title,
                 'content' => substr($article->content, 0, 200),
                 'published_at' => $article->published_at,
             ];
-        }, $articles);
+        });
 
         return response()->json($results);
     }
+
+    /**
+     * Normalise une chaîne en supprimant uniquement les accents
+     * tout en conservant les caractères spéciaux.
+     * Exemple : "élève #1" → "eleve #1"
+     *
+     * @param string $string
+     * @return string
+     */
+    private function normalizeString(string $string): string
+    {
+        // Décomposer les caractères Unicode (NFD)
+        $normalized = \Normalizer::normalize($string, \Normalizer::FORM_D);
+
+        // Supprimer uniquement les accents (marques diacritiques)
+        $normalized = preg_replace('/\p{Mn}/u', '', $normalized);
+
+        return $normalized;
+    }
+
 
     /**
      * Store a newly created article.
@@ -139,4 +181,3 @@ class ArticleController extends Controller
         return response()->json(['message' => 'Article deleted successfully']);
     }
 }
-
