@@ -73,10 +73,10 @@ class ArticleController extends Controller
             return response()->json([]);
         }
 
+        // Normalisation côté PHP (suppression des accents)
+        $normalizedQuery = $this->normalizeString($query);
 
-        $normalizedQuery = iconv('UTF-8', 'ASCII//TRANSLIT', $query);
-
-
+        // Requête avec suppression des accents côté SQL
         $articles = DB::table('articles')
             ->whereRaw("
             LOWER(
@@ -107,7 +107,17 @@ class ArticleController extends Controller
         return response()->json($results);
     }
 
-
+    /**
+     * Normalise une chaîne en supprimant les accents.
+     * Exemple : "éléve" → "eleve"
+     *
+     * @param string $string
+     * @return string
+     */
+    private function normalizeString(string $string): string
+    {
+        return iconv('UTF-8', 'ASCII//TRANSLIT', $string);
+    }
 
     /**
      * Store a newly created article.
