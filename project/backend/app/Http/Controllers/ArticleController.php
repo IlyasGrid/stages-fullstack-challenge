@@ -13,7 +13,9 @@ class ArticleController extends Controller
      */
     public function index(Request $request)
     {
-        $articles = Article::all();
+
+        // Eager loading pour éviter le N+1
+        $articles = Article::with(['author', 'comments'])->get();
 
         $articles = $articles->map(function ($article) use ($request) {
             if ($request->has('performance_test')) {
