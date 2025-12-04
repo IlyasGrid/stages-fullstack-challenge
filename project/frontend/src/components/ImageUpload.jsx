@@ -15,7 +15,7 @@ function ImageUpload() {
       setMessage('');
       setError('');
       
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      const sizeMB = (file.size / (10 * 1024 * 1024)).toFixed(2);
       setMessage(`Fichier sélectionné : ${file.name} (${sizeMB} MB)`);
     }
   };
