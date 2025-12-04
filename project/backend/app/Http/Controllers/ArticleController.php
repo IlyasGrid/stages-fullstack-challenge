@@ -70,8 +70,11 @@ class ArticleController extends Controller
         $query = $request->input('q');
 
         if (!$query) {
-            return response()->json([]); 
+            return response()->json([]);
         }
+
+        // 
+        $query = strtolower($query);
 
         // Normalisation côté PHP (suppression des accents)
         $normalizedQuery = $this->normalizeString($query);
@@ -108,16 +111,24 @@ class ArticleController extends Controller
     }
 
     /**
-     * Normalise une chaîne en supprimant les accents.
-     * Exemple : "éléve" → "eleve"
+     * Normalise une chaîne en supprimant uniquement les accents
+     * tout en conservant les caractères spéciaux.
+     * Exemple : "élève #1" → "eleve #1"
      *
      * @param string $string
      * @return string
      */
     private function normalizeString(string $string): string
     {
-        return iconv('UTF-8', 'ASCII//TRANSLIT', $string);
+        // Décomposer les caractères Unicode (NFD)
+        $normalized = \Normalizer::normalize($string, \Normalizer::FORM_D);
+
+        // Supprimer uniquement les accents (marques diacritiques)
+        $normalized = preg_replace('/\p{Mn}/u', '', $normalized);
+
+        return $normalized;
     }
+
 
     /**
      * Store a newly created article.
